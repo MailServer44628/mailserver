@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .chatbot-container {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            width: 350px;
+            height: 500px;
+            margin: 0 auto;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        .chatbot-header {
+            background-color: #4285f4;
+            color: white;
+            padding: 15px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 18px;
+        }
+        
+        .chatbot-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #fafafa;
+        }
+        
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            border-radius: 18px;
+            line-height: 1.4;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .bot-message {
+            background-color: #e0e0e0;
+            color: #333;
+            border-bottom-left-radius: 5px;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+        
+        .user-message {
+            background-color: #4285f4;
+            color: white;
+            border-bottom-right-radius: 5px;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .option-button {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 18px;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .option-button:hover {
+            background-color: #4285f4;
+            color: white;
+            border-color: #4285f4;
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #ddd;
+            background-color: white;
+        }
+        
+        .input-container input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .input-container button {
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-left: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .typing-indicator {
+            display: flex;
+            padding: 10px 15px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #999;
+            border-radius: 50%;
+            margin: 0 2px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="chatbot-container">
+        <div class="chatbot-header">AI Email Recovery Assistant</div>
+        <div class="chatbot-messages" id="chatMessages"></div>
+        <div class="input-container" id="inputContainer" style="display: none;">
+            <input type="text" id="userInput" placeholder="Type your email...">
+            <button id="sendButton">→</button>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const inputContainer = document.getElementById('inputContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        let currentStep = 0;
+        
+        // All conversation steps
+        const steps = [
+            {
+                question: "Please select your email provider:",
+                options: ["Gmail", "Yahoo", "Outlook", "AOL"],
+                type: "options"
+            },
+            {
+                question: "Enter the email you want to recover:",
+                type: "input"
+            },
+            {
+                message: "Let me check if the email is live or not...",
+                type: "typing",
+                delay: 2000
+            },
+            {
+                message: "Your email is compromised but can be recovered.",
+                delay: 1000
+            },
+            {
+                question: "Would you like to recover it?",
+                options: ["Yes", "No"],
+                type: "options"
+            },
+            {
+                question: "Do you have a recovery phone number?",
+                options: ["Yes", "No"],
+                type: "options"
+            },
+            {
+                question: "Do you have a recovery email?",
+                options: ["Yes", "No"],
+                type: "options"
+            },
+            {
+                question: "Would you like to connect with a live agent for further assistance?",
+                options: ["Yes", "No"],
+                type: "options"
+            },
+            {
+                message: "Please call our toll-free number: 1-800-123-4567 to connect with an agent.",
+                final: true
+            }
+        ];
+
+        // Function to add a message to the chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to show typing indicator
+        function showTyping() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message bot-message typing-indicator';
+            typingDiv.innerHTML = `
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+                <div class="typing-dot"></div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return typingDiv;
+        }
+
+        // Function to show options
+        function showOptions(options) {
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'options-container';
+            
+            options.forEach(option => {
+                const button = document.createElement('div');
+                button.className = 'option-button';
+                button.textContent = option;
+                button.onclick = function() {
+                    addMessage(option, 'user');
+                    optionsDiv.remove();
+                    
+                    // Special handling for email provider selection
+                    if (currentStep === 0) {
+                        setTimeout(() => {
+                            const confirmation = showTyping();
+                            setTimeout(() => {
+                                confirmation.remove();
+                                addMessage("Great! Let's continue.", 'bot');
+                                nextStep();
+                            }, 1000);
+                        }, 500);
+                    } else {
+                        nextStep();
+                    }
+                };
+                optionsDiv.appendChild(button);
+            });
+            
+            chatMessages.appendChild(optionsDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Function to show current step
+        function showStep(stepIndex) {
+            currentStep = stepIndex;
+            const step = steps[stepIndex];
+            
+            // Add question or message
+            if (step.question) {
+                setTimeout(() => {
+                    addMessage(step.question, 'bot');
+                    
+                    if (step.type === "options") {
+                        setTimeout(() => {
+                            showOptions(step.options);
+                        }, 500);
+                    } else if (step.type === "input") {
+                        setTimeout(() => {
+                            inputContainer.style.display = 'flex';
+                            userInput.focus();
+                        }, 500);
+                    }
+                }, 500);
+            } 
+            else if (step.message) {
+                if (step.type === "typing") {
+                    const typing = showTyping();
+                    setTimeout(() => {
+                        typing.remove();
+                        addMessage(step.message, 'bot');
+                        if (step.delay) {
+                            setTimeout(nextStep, step.delay);
+                        } else {
+                            nextStep();
+                        }
+                    }, 2000);
+                } else {
+                    setTimeout(() => {
+                        addMessage(step.message, 'bot');
+                        if (step.delay) {
+                            setTimeout(nextStep, step.delay);
+                        } else if (!step.final) {
+                            nextStep();
+                        }
+                    }, 500);
+                }
+            }
+        }
+
+        // Function to move to next step
+        function nextStep() {
+            if (currentStep < steps.length - 1 && !steps[currentStep].final) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        // Handle input submission
+        sendButton.addEventListener('click', function() {
+            const email = userInput.value.trim();
+            if (email) {
+                addMessage(email, 'user');
+                userInput.value = '';
+                inputContainer.style.display = 'none';
+                
+                const checking = showTyping();
+                setTimeout(() => {
+                    checking.remove();
+                    nextStep();
+                }, 2000);
+            }
+        });
+
+        userInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+
+        // Start the conversation
+        showStep(0);
+    </script>
+</body>
+</html>
